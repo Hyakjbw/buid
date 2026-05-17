@@ -5,8 +5,8 @@ api-version: '1.21'
 commands:
   excavatortool:
     description: Give a 3x3 excavator tool
-    usage: /excavatortool give <player> <pickaxe|shovel>
-    permission: excavatortool.give
+    usage: /excavatortool give <player> <type>
+    aliases: [extool]
 permissions:
   excavatortool.give:
     description: Allows giving excavator tools
