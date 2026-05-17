@@ -7,7 +7,7 @@ on:
         description: 'Tên thư mục project cần build (ví dụ: ExcavatorTools)'
         required: true
         type: string
-        default: 'ExcavatorTools'
+        default: 'tool3x3'
 
 jobs:
   build:
