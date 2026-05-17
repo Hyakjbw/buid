@@ -1,23 +1,47 @@
-name: Build Plugin
-on: [push, workflow_dispatch]
+name: Build Minecraft Plugin/Mod
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: 'Tên thư mục project cần build (ví dụ: ExcavatorTools)'
+        required: true
+        type: string
+        default: 'ExcavatorTools'
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup JDK 21
         uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.7
+
+      - name: Verify project directory exists
+        run: |
+          if [ ! -d "${{ github.event.inputs.project }}" ]; then
+            echo "❌ Thư mục '${{ github.event.inputs.project }}' không tồn tại!"
+            echo "Hãy kiểm tra lại tên project."
+            exit 1
+          fi
+
       - name: Build with Gradle
-        run: gradle build
+        working-directory: ${{ github.event.inputs.project }}
+        run: |
+          # Nếu chưa có gradlew, tạo wrapper (chỉ cần làm 1 lần)
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.7
+          fi
+          chmod +x gradlew
+          ./gradlew build
+
       - name: Upload artifact
-        uses: actions/upload-artifact@v4 # Đã sửa từ v3 thành v4
+        uses: actions/upload-artifact@v4
         with:
-          name: ExcavatorTools
-          path: build/libs/ExcavatorTools.jar
+          name: ${{ github.event.inputs.project }}
+          path: ${{ github.event.inputs.project }}/build/libs/*.jar
