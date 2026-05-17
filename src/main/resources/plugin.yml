@@ -1,0 +1,13 @@
+name: ExcavatorTools
+version: 1.0.0
+main: com.example.excavatortools.ExcavatorTools
+api-version: '1.21'
+commands:
+  excavatortool:
+    description: Give a 3x3 excavator tool
+    usage: /excavatortool give <player> <pickaxe|shovel>
+    permission: excavatortool.give
+permissions:
+  excavatortool.give:
+    description: Allows giving excavator tools
+    default: op
