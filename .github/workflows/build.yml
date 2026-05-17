@@ -17,7 +17,7 @@ jobs:
       - name: Build with Gradle
         run: gradle build
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # Đã sửa từ v3 thành v4
         with:
           name: ExcavatorTools
           path: build/libs/ExcavatorTools.jar
