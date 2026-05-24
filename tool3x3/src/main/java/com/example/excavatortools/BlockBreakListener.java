@@ -16,18 +16,20 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.util.Vector;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 public class BlockBreakListener implements Listener {
 
     private static final NamespacedKey KEY = new NamespacedKey(ExcavatorTools.getInstance(), "excavator");
     private static WorldGuardPlugin worldGuard = null;
+
+    // ✅ Dùng Set thay cho metadata – sẽ được làm mới khi reload
+    private final Set<UUID> processingPlayers = new HashSet<>();
 
     static {
         Plugin plugin = ExcavatorTools.getInstance().getServer().getPluginManager().getPlugin("WorldGuard");
@@ -46,45 +48,51 @@ public class BlockBreakListener implements Listener {
 
         if (tool == null || !tool.hasItemMeta()) return;
         if (!tool.getItemMeta().getPersistentDataContainer().has(KEY, PersistentDataType.BYTE)) return;
-        if (player.hasMetadata("excavator_processing")) return;
 
-        Vector direction = player.getEyeLocation().toVector().subtract(origin.getLocation().toVector()).normalize();
+        // ✅ Kiểm tra bằng Set, không dùng metadata dễ sót
+        if (processingPlayers.contains(player.getUniqueId())) return;
+
+        // Xác định mặt đào
+        Vector direction = player.getEyeLocation().toVector()
+                .subtract(origin.getLocation().toVector()).normalize();
         BlockFace face = getTargetFace(direction);
         Set<Block> blocks = get3x3Blocks(origin, face);
 
-        player.setMetadata("excavator_processing", new FixedMetadataValue(ExcavatorTools.getInstance(), true));
+        // Đánh dấu bắt đầu xử lý
+        processingPlayers.add(player.getUniqueId());
 
-        for (Block b : blocks) {
-            if (b.equals(origin)) continue;
-            if (b.getType() == Material.BEDROCK || b.getType() == Material.AIR) continue;
+        try {
+            for (Block b : blocks) {
+                if (b.equals(origin)) continue;
+                if (b.getType() == Material.BEDROCK || b.getType() == Material.AIR) continue;
 
-            // Kiểm tra quyền WorldGuard (cả BUILD và BLOCK_BREAK)
-            if (!canBreak(player, b)) continue;
+                // WorldGuard check
+                if (!canBreak(player, b)) continue;
 
-            b.breakNaturally(tool);
+                b.breakNaturally(tool);
+            }
+        } finally {
+            // ✅ Luôn xóa cờ dù có lỗi hay không
+            processingPlayers.remove(player.getUniqueId());
         }
-
-        player.removeMetadata("excavator_processing", ExcavatorTools.getInstance());
     }
 
     private boolean canBreak(Player player, Block block) {
-        if (worldGuard == null) return true; // không có WorldGuard -> cho phép
+        if (worldGuard == null) return true;
 
         LocalPlayer localPlayer = worldGuard.wrapPlayer(player);
         com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(block.getLocation());
         RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
         RegionQuery query = container.createQuery();
 
-        // Chỉ cho phép nếu CẢ HAI cờ BUILD và BLOCK_BREAK đều không bị từ chối
-        return query.testState(loc, localPlayer, Flags.BLOCK_BREAK) 
-            && query.testState(loc, localPlayer, Flags.BUILD);
+        return query.testState(loc, localPlayer, Flags.BLOCK_BREAK)
+                && query.testState(loc, localPlayer, Flags.BUILD);
     }
 
     private BlockFace getTargetFace(Vector direction) {
         double x = Math.abs(direction.getX());
         double y = Math.abs(direction.getY());
         double z = Math.abs(direction.getZ());
-
         if (x > y && x > z) return direction.getX() > 0 ? BlockFace.WEST : BlockFace.EAST;
         if (y > z) return direction.getY() > 0 ? BlockFace.DOWN : BlockFace.UP;
         return direction.getZ() > 0 ? BlockFace.NORTH : BlockFace.SOUTH;
@@ -96,14 +104,14 @@ public class BlockBreakListener implements Listener {
         switch (face) {
             case UP:
             case DOWN:
-                offsets = new int[][]{{-1,0,-1}, {-1,0,0}, {-1,0,1}, {0,0,-1}, {0,0,0}, {0,0,1}, {1,0,-1}, {1,0,0}, {1,0,1}};
+                offsets = new int[][]{{-1,0,-1},{-1,0,0},{-1,0,1},{0,0,-1},{0,0,0},{0,0,1},{1,0,-1},{1,0,0},{1,0,1}};
                 break;
             case NORTH:
             case SOUTH:
-                offsets = new int[][]{{-1,-1,0}, {-1,0,0}, {-1,1,0}, {0,-1,0}, {0,0,0}, {0,1,0}, {1,-1,0}, {1,0,0}, {1,1,0}};
+                offsets = new int[][]{{-1,-1,0},{-1,0,0},{-1,1,0},{0,-1,0},{0,0,0},{0,1,0},{1,-1,0},{1,0,0},{1,1,0}};
                 break;
             default: // EAST/WEST
-                offsets = new int[][]{{0,-1,-1}, {0,-1,0}, {0,-1,1}, {0,0,-1}, {0,0,0}, {0,0,1}, {0,1,-1}, {0,1,0}, {0,1,1}};
+                offsets = new int[][]{{0,-1,-1},{0,-1,0},{0,-1,1},{0,0,-1},{0,0,0},{0,0,1},{0,1,-1},{0,1,0},{0,1,1}};
         }
         for (int[] offset : offsets) {
             blocks.add(center.getRelative(offset[0], offset[1], offset[2]));
