@@ -18,7 +18,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.util.Vector;   // ✅ Thêm import này
+import org.bukkit.util.Vector;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -46,16 +46,29 @@ public class BlockBreakListener implements Listener {
         Block origin = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
 
+        // Kiểm tra đúng công cụ
         if (tool == null || !tool.hasItemMeta()) return;
         if (!tool.getItemMeta().getPersistentDataContainer().has(KEY, PersistentDataType.BYTE)) return;
 
+        // Chống đệ quy
         if (processingPlayers.contains(player.getUniqueId())) return;
 
-        Vector direction = player.getEyeLocation().toVector()
-                .subtract(origin.getLocation().toVector()).normalize();
+        // Xác định hướng đào an toàn (tránh zero vector)
+        Vector eye = player.getEyeLocation().toVector();
+        Vector target = origin.getLocation().toVector();
+        Vector direction = target.subtract(eye); // vector từ mắt đến block
+
+        // Nếu đứng quá gần block (đào dưới chân) → mặc định đào mặt trên (DOWN)
+        if (direction.lengthSquared() < 0.0001) {
+            direction = new Vector(0, -1, 0);
+        } else {
+            direction.normalize();
+        }
+
         BlockFace face = getTargetFace(direction);
         Set<Block> blocks = get3x3Blocks(origin, face);
 
+        // Đánh dấu đang xử lý
         processingPlayers.add(player.getUniqueId());
 
         try {
@@ -63,11 +76,14 @@ public class BlockBreakListener implements Listener {
                 if (b.equals(origin)) continue;
                 if (b.getType() == Material.BEDROCK || b.getType() == Material.AIR) continue;
 
+                // Kiểm tra WorldGuard (nếu có)
                 if (!canBreak(player, b)) continue;
 
+                // Phá block an toàn
                 b.breakNaturally(tool);
             }
         } finally {
+            // Hủy đánh dấu
             processingPlayers.remove(player.getUniqueId());
         }
     }
@@ -88,6 +104,7 @@ public class BlockBreakListener implements Listener {
         double x = Math.abs(direction.getX());
         double y = Math.abs(direction.getY());
         double z = Math.abs(direction.getZ());
+
         if (x > y && x > z) return direction.getX() > 0 ? BlockFace.WEST : BlockFace.EAST;
         if (y > z) return direction.getY() > 0 ? BlockFace.DOWN : BlockFace.UP;
         return direction.getZ() > 0 ? BlockFace.NORTH : BlockFace.SOUTH;
