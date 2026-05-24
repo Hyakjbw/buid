@@ -1,5 +1,12 @@
 package com.example.excavatortools;
 
+import com.sk89q.worldedit.bukkit.BukkitAdapter;
+import com.sk89q.worldguard.LocalPlayer;
+import com.sk89q.worldguard.WorldGuard;
+import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
+import com.sk89q.worldguard.protection.flags.Flags;
+import com.sk89q.worldguard.protection.regions.RegionContainer;
+import com.sk89q.worldguard.protection.regions.RegionQuery;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
@@ -11,6 +18,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 
 import java.util.HashSet;
@@ -19,9 +27,20 @@ import java.util.Set;
 public class BlockBreakListener implements Listener {
 
     private static final NamespacedKey KEY = new NamespacedKey(ExcavatorTools.getInstance(), "excavator");
+    private static WorldGuardPlugin worldGuard = null;
+
+    static {
+        Plugin plugin = ExcavatorTools.getInstance().getServer().getPluginManager().getPlugin("WorldGuard");
+        if (plugin instanceof WorldGuardPlugin) {
+            worldGuard = (WorldGuardPlugin) plugin;
+        }
+    }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
+        // Nếu sự kiện gốc bị hủy (do plugin khác như WorldGuard) thì không làm gì
+        if (event.isCancelled()) return;
+
         Player player = event.getPlayer();
         Block origin = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
@@ -37,23 +56,41 @@ public class BlockBreakListener implements Listener {
         Vector direction = player.getEyeLocation().toVector().subtract(origin.getLocation().toVector()).normalize();
         BlockFace face = getTargetFace(direction);
 
-        // Tính vùng 3x3 dựa trên mặt bị đào
+        // Tính vùng 3x3
         Set<Block> blocks = get3x3Blocks(origin, face);
 
-        // Đánh dấu đang xử lý để tránh đệ quy
+        // Đánh dấu đang xử lý
         player.setMetadata("excavator_processing", new FixedMetadataValue(ExcavatorTools.getInstance(), true));
 
-        // Phá các block trong vùng (trừ block gốc đã được phá bởi sự kiện này)
+        // Duyệt và phá an toàn
         for (Block b : blocks) {
-            if (b.equals(origin)) continue; // block gốc sự kiện đã xử lý
+            if (b.equals(origin)) continue; // block gốc đã được sự kiện chính xử lý
             if (b.getType() == Material.BEDROCK || b.getType() == Material.AIR) continue;
 
-            // Dùng breakNaturally để server và anti-xray cập nhật đúng
+            // ✅ KIỂM TRA QUYỀN WORLDGUARD TRƯỚC KHI PHÁ
+            if (!canBuild(player, b)) continue;
+
+            // Phá block bằng breakNaturally để kích hoạt event và anti‑xray
             b.breakNaturally(tool);
         }
 
-        // Xóa cờ
+        // Xoá cờ đánh dấu
         player.removeMetadata("excavator_processing", ExcavatorTools.getInstance());
+    }
+
+    /**
+     * Kiểm tra người chơi có quyền phá block tại vị trí này không (dùng WorldGuard)
+     */
+    private boolean canBuild(Player player, Block block) {
+        if (worldGuard == null) return true; // không có WorldGuard thì cho phép
+
+        LocalPlayer localPlayer = worldGuard.wrapPlayer(player);
+        com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(block.getLocation());
+        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
+        RegionQuery query = container.createQuery();
+
+        // Nếu không có region nào ở đó, trả về true; nếu có, kiểm tra cờ BUILD
+        return query.testState(loc, localPlayer, Flags.BUILD);
     }
 
     private BlockFace getTargetFace(Vector direction) {
