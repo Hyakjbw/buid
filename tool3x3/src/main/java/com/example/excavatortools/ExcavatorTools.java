@@ -14,6 +14,13 @@ public class ExcavatorTools extends JavaPlugin {
         getLogger().info("ExcavatorTools enabled!");
     }
 
+    @Override
+    public void onDisable() {
+        // Hủy đăng ký sự kiện và lệnh (Bukkit tự làm, nhưng ta đặt instance = null để GC)
+        instance = null;
+        getLogger().info("ExcavatorTools disabled.");
+    }
+
     public static ExcavatorTools getInstance() {
         return instance;
     }
