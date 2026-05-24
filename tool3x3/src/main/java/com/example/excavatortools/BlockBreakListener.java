@@ -18,6 +18,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.Vector;   // ✅ Thêm import này
 
 import java.util.HashSet;
 import java.util.Set;
@@ -28,7 +29,6 @@ public class BlockBreakListener implements Listener {
     private static final NamespacedKey KEY = new NamespacedKey(ExcavatorTools.getInstance(), "excavator");
     private static WorldGuardPlugin worldGuard = null;
 
-    // ✅ Dùng Set thay cho metadata – sẽ được làm mới khi reload
     private final Set<UUID> processingPlayers = new HashSet<>();
 
     static {
@@ -49,16 +49,13 @@ public class BlockBreakListener implements Listener {
         if (tool == null || !tool.hasItemMeta()) return;
         if (!tool.getItemMeta().getPersistentDataContainer().has(KEY, PersistentDataType.BYTE)) return;
 
-        // ✅ Kiểm tra bằng Set, không dùng metadata dễ sót
         if (processingPlayers.contains(player.getUniqueId())) return;
 
-        // Xác định mặt đào
         Vector direction = player.getEyeLocation().toVector()
                 .subtract(origin.getLocation().toVector()).normalize();
         BlockFace face = getTargetFace(direction);
         Set<Block> blocks = get3x3Blocks(origin, face);
 
-        // Đánh dấu bắt đầu xử lý
         processingPlayers.add(player.getUniqueId());
 
         try {
@@ -66,13 +63,11 @@ public class BlockBreakListener implements Listener {
                 if (b.equals(origin)) continue;
                 if (b.getType() == Material.BEDROCK || b.getType() == Material.AIR) continue;
 
-                // WorldGuard check
                 if (!canBreak(player, b)) continue;
 
                 b.breakNaturally(tool);
             }
         } finally {
-            // ✅ Luôn xóa cờ dù có lỗi hay không
             processingPlayers.remove(player.getUniqueId());
         }
     }
