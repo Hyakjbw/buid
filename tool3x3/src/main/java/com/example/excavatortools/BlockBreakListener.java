@@ -38,66 +38,76 @@ public class BlockBreakListener implements Listener {
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        // Nếu sự kiện gốc bị hủy (do plugin khác như WorldGuard) thì không làm gì
+        // Nếu sự kiện gốc bị hủy (do WorldGuard hoặc plugin khác) thì dừng ngay
         if (event.isCancelled()) return;
 
         Player player = event.getPlayer();
         Block origin = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
 
-        // Kiểm tra item có phải excavator tool không
+        // Không phải Excavator tool
         if (tool == null || !tool.hasItemMeta()) return;
         if (!tool.getItemMeta().getPersistentDataContainer().has(KEY, PersistentDataType.BYTE)) return;
 
-        // Tránh vòng lặp vô hạn khi phá block con
+        // Chống đệ quy
         if (player.hasMetadata("excavator_processing")) return;
 
-        // Xác định hướng đào
+        // Xác định mặt đào
         Vector direction = player.getEyeLocation().toVector().subtract(origin.getLocation().toVector()).normalize();
         BlockFace face = getTargetFace(direction);
 
-        // Tính vùng 3x3
+        // Lấy danh sách block 3x3
         Set<Block> blocks = get3x3Blocks(origin, face);
 
         // Đánh dấu đang xử lý
         player.setMetadata("excavator_processing", new FixedMetadataValue(ExcavatorTools.getInstance(), true));
 
-        // Duyệt và phá an toàn
+        // Duyệt từng block, chỉ phá nếu có quyền
         for (Block b : blocks) {
-            if (b.equals(origin)) continue; // block gốc đã được sự kiện chính xử lý
+            if (b.equals(origin)) continue; // block chính đã được xử lý bởi sự kiện gốc
             if (b.getType() == Material.BEDROCK || b.getType() == Material.AIR) continue;
 
-            // ✅ KIỂM TRA QUYỀN WORLDGUARD TRƯỚC KHI PHÁ
-            if (!canBuild(player, b)) continue;
+            // ✅ Kiểm tra quyền WorldGuard TRƯỚC KHI PHÁ
+            if (!canBreak(player, b)) continue;
 
-            // Phá block bằng breakNaturally để kích hoạt event và anti‑xray
+            // Phá an toàn
             b.breakNaturally(tool);
         }
 
-        // Xoá cờ đánh dấu
+        // Xoá cờ
         player.removeMetadata("excavator_processing", ExcavatorTools.getInstance());
     }
 
     /**
-     * Kiểm tra người chơi có quyền phá block tại vị trí này không (dùng WorldGuard)
+     * Kiểm tra người chơi có quyền phá block tại vị trí này không.
+     * Ưu tiên flag BLOCK_BREAK, nếu không có thì dùng BUILD.
      */
-    private boolean canBuild(Player player, Block block) {
-        if (worldGuard == null) return true; // không có WorldGuard thì cho phép
+    private boolean canBreak(Player player, Block block) {
+        // Nếu không có WorldGuard, mặc định cho phép
+        if (worldGuard == null) return true;
 
         LocalPlayer localPlayer = worldGuard.wrapPlayer(player);
         com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(block.getLocation());
         RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
         RegionQuery query = container.createQuery();
 
-        // Nếu không có region nào ở đó, trả về true; nếu có, kiểm tra cờ BUILD
-        return query.testState(loc, localPlayer, Flags.BUILD);
+        // Kiểm tra quyền phá block (BLOCK_BREAK) và quyền xây dựng chung (BUILD)
+        // Nếu một trong hai bị từ chối thì không được phép
+        boolean canBreak = query.testState(loc, localPlayer, Flags.BLOCK_BREAK);
+        boolean canBuild = query.testState(loc, localPlayer, Flags.BUILD);
+
+        // Nếu flag BLOCK_BREAK được set (không null), ưu tiên nó; ngược lại dùng BUILD
+        if (query.testState(loc, localPlayer, Flags.BLOCK_BREAK) != null) {
+            return canBreak;
+        } else {
+            return canBuild;
+        }
     }
 
     private BlockFace getTargetFace(Vector direction) {
         double x = Math.abs(direction.getX());
         double y = Math.abs(direction.getY());
         double z = Math.abs(direction.getZ());
-
         if (x > y && x > z) return direction.getX() > 0 ? BlockFace.WEST : BlockFace.EAST;
         if (y > z) return direction.getY() > 0 ? BlockFace.DOWN : BlockFace.UP;
         return direction.getZ() > 0 ? BlockFace.NORTH : BlockFace.SOUTH;
@@ -119,8 +129,7 @@ public class BlockBreakListener implements Listener {
                 offsets = new int[][]{{0,-1,-1}, {0,-1,0}, {0,-1,1}, {0,0,-1}, {0,0,0}, {0,0,1}, {0,1,-1}, {0,1,0}, {0,1,1}};
         }
         for (int[] offset : offsets) {
-            Block b = center.getRelative(offset[0], offset[1], offset[2]);
-            blocks.add(b);
+            blocks.add(center.getRelative(offset[0], offset[1], offset[2]));
         }
         return blocks;
     }
