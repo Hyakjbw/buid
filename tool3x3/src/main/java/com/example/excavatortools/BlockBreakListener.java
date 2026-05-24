@@ -38,76 +38,53 @@ public class BlockBreakListener implements Listener {
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        // Nếu sự kiện gốc bị hủy (do WorldGuard hoặc plugin khác) thì dừng ngay
         if (event.isCancelled()) return;
 
         Player player = event.getPlayer();
         Block origin = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
 
-        // Không phải Excavator tool
         if (tool == null || !tool.hasItemMeta()) return;
         if (!tool.getItemMeta().getPersistentDataContainer().has(KEY, PersistentDataType.BYTE)) return;
-
-        // Chống đệ quy
         if (player.hasMetadata("excavator_processing")) return;
 
-        // Xác định mặt đào
         Vector direction = player.getEyeLocation().toVector().subtract(origin.getLocation().toVector()).normalize();
         BlockFace face = getTargetFace(direction);
-
-        // Lấy danh sách block 3x3
         Set<Block> blocks = get3x3Blocks(origin, face);
 
-        // Đánh dấu đang xử lý
         player.setMetadata("excavator_processing", new FixedMetadataValue(ExcavatorTools.getInstance(), true));
 
-        // Duyệt từng block, chỉ phá nếu có quyền
         for (Block b : blocks) {
-            if (b.equals(origin)) continue; // block chính đã được xử lý bởi sự kiện gốc
+            if (b.equals(origin)) continue;
             if (b.getType() == Material.BEDROCK || b.getType() == Material.AIR) continue;
 
-            // ✅ Kiểm tra quyền WorldGuard TRƯỚC KHI PHÁ
+            // Kiểm tra quyền WorldGuard (cả BUILD và BLOCK_BREAK)
             if (!canBreak(player, b)) continue;
 
-            // Phá an toàn
             b.breakNaturally(tool);
         }
 
-        // Xoá cờ
         player.removeMetadata("excavator_processing", ExcavatorTools.getInstance());
     }
 
-    /**
-     * Kiểm tra người chơi có quyền phá block tại vị trí này không.
-     * Ưu tiên flag BLOCK_BREAK, nếu không có thì dùng BUILD.
-     */
     private boolean canBreak(Player player, Block block) {
-        // Nếu không có WorldGuard, mặc định cho phép
-        if (worldGuard == null) return true;
+        if (worldGuard == null) return true; // không có WorldGuard -> cho phép
 
         LocalPlayer localPlayer = worldGuard.wrapPlayer(player);
         com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(block.getLocation());
         RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
         RegionQuery query = container.createQuery();
 
-        // Kiểm tra quyền phá block (BLOCK_BREAK) và quyền xây dựng chung (BUILD)
-        // Nếu một trong hai bị từ chối thì không được phép
-        boolean canBreak = query.testState(loc, localPlayer, Flags.BLOCK_BREAK);
-        boolean canBuild = query.testState(loc, localPlayer, Flags.BUILD);
-
-        // Nếu flag BLOCK_BREAK được set (không null), ưu tiên nó; ngược lại dùng BUILD
-        if (query.testState(loc, localPlayer, Flags.BLOCK_BREAK) != null) {
-            return canBreak;
-        } else {
-            return canBuild;
-        }
+        // Chỉ cho phép nếu CẢ HAI cờ BUILD và BLOCK_BREAK đều không bị từ chối
+        return query.testState(loc, localPlayer, Flags.BLOCK_BREAK) 
+            && query.testState(loc, localPlayer, Flags.BUILD);
     }
 
     private BlockFace getTargetFace(Vector direction) {
         double x = Math.abs(direction.getX());
         double y = Math.abs(direction.getY());
         double z = Math.abs(direction.getZ());
+
         if (x > y && x > z) return direction.getX() > 0 ? BlockFace.WEST : BlockFace.EAST;
         if (y > z) return direction.getY() > 0 ? BlockFace.DOWN : BlockFace.UP;
         return direction.getZ() > 0 ? BlockFace.NORTH : BlockFace.SOUTH;
