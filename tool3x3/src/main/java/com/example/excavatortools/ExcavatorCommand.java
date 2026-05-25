@@ -52,7 +52,6 @@ public class ExcavatorCommand implements CommandExecutor {
 
             target.getInventory().addItem(tool);
             sender.sendMessage("§aĐã đưa Excavator " + type + " cho " + target.getName());
-            ExcavatorTools.getInstance().debug("Given tool " + type + " to " + target.getName() + ", has key: " + ExcavatorTools.isExcavatorTool(tool));
             return true;
         }
 
