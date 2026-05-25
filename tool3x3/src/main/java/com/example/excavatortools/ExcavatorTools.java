@@ -9,6 +9,7 @@ public class ExcavatorTools extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        WorldGuardHook.init();
         getServer().getPluginManager().registerEvents(new BlockBreakListener(), this);
         getCommand("excavatortool").setExecutor(new ExcavatorCommand());
         getLogger().info("ExcavatorTools enabled!");
