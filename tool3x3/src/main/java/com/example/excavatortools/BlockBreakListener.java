@@ -25,7 +25,7 @@ public class BlockBreakListener implements Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         // Log 1: Sự kiện được gọi
-        ExcavatorTools.getInstance().getLogger().info("[DEBUG] BlockBreakEvent fired, cancelled=" + event.isCancelled());
+        ExcavatorTools.getInstance().debug("BlockBreakEvent fired, cancelled=" + event.isCancelled());
 
         if (event.isCancelled()) return;
 
