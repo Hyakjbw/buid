@@ -1,12 +1,5 @@
 package com.example.excavatortools;
 
-import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldguard.LocalPlayer;
-import com.sk89q.worldguard.WorldGuard;
-import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
-import com.sk89q.worldguard.protection.flags.Flags;
-import com.sk89q.worldguard.protection.regions.RegionContainer;
-import com.sk89q.worldguard.protection.regions.RegionQuery;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
@@ -17,7 +10,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 
 import java.util.HashSet;
@@ -27,16 +19,7 @@ import java.util.UUID;
 public class BlockBreakListener implements Listener {
 
     private static final NamespacedKey KEY = new NamespacedKey(ExcavatorTools.getInstance(), "excavator");
-    private static WorldGuardPlugin worldGuard = null;
-
     private final Set<UUID> processingPlayers = new HashSet<>();
-
-    static {
-        Plugin plugin = ExcavatorTools.getInstance().getServer().getPluginManager().getPlugin("WorldGuard");
-        if (plugin instanceof WorldGuardPlugin) {
-            worldGuard = (WorldGuardPlugin) plugin;
-        }
-    }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
@@ -46,27 +29,22 @@ public class BlockBreakListener implements Listener {
         Block origin = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
 
-        // Không phải công cụ Excavator
+        // Không phải Excavator tool
         if (tool == null || !tool.hasItemMeta()) return;
         if (!tool.getItemMeta().getPersistentDataContainer().has(KEY, PersistentDataType.BYTE)) return;
 
         // Chống đệ quy
         if (processingPlayers.contains(player.getUniqueId())) return;
 
-        // Xác định face dựa trên loại công cụ
+        // Xác định mặt đào
         BlockFace face;
         Material toolType = tool.getType();
 
-        // Nếu là xẻng → luôn đào ngang 3x3 (mặt UP hoặc DOWN)
         if (toolType.name().endsWith("_SHOVEL")) {
-            // Nếu block nằm dưới hoặc ngang tầm mắt → đào mặt trên (DOWN)
-            if (origin.getY() <= player.getEyeLocation().getBlockY()) {
-                face = BlockFace.UP;   // Đào các block bên dưới
-            } else {
-                face = BlockFace.DOWN; // Đào các block bên trên
-            }
+            // Xẻng luôn đào ngang 3x3
+            face = (origin.getY() <= player.getEyeLocation().getBlockY()) ? BlockFace.UP : BlockFace.DOWN;
         } else {
-            // Cúp (pickaxe) hoặc công cụ khác → giữ nguyên theo hướng nhìn
+            // Cúp hoặc tool khác: theo hướng nhìn
             Vector eye = player.getEyeLocation().toVector();
             Vector target = origin.getLocation().toVector();
             Vector direction = target.subtract(eye);
@@ -79,7 +57,6 @@ public class BlockBreakListener implements Listener {
         }
 
         Set<Block> blocks = get3x3Blocks(origin, face);
-
         processingPlayers.add(player.getUniqueId());
 
         try {
@@ -87,25 +64,14 @@ public class BlockBreakListener implements Listener {
                 if (b.equals(origin)) continue;
                 if (b.getType() == Material.BEDROCK || b.getType() == Material.AIR) continue;
 
-                if (!canBreak(player, b)) continue;
+                // Kiểm tra WorldGuard qua hook (an toàn, không crash nếu thiếu WG)
+                if (!WorldGuardHook.canBreak(player, b)) continue;
 
                 b.breakNaturally(tool);
             }
         } finally {
             processingPlayers.remove(player.getUniqueId());
         }
-    }
-
-    private boolean canBreak(Player player, Block block) {
-        if (worldGuard == null) return true;
-
-        LocalPlayer localPlayer = worldGuard.wrapPlayer(player);
-        com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(block.getLocation());
-        RegionContainer container = WorldGuard.getInstance().getPlatform().getRegionContainer();
-        RegionQuery query = container.createQuery();
-
-        return query.testState(loc, localPlayer, Flags.BLOCK_BREAK)
-                && query.testState(loc, localPlayer, Flags.BUILD);
     }
 
     private BlockFace getTargetFace(Vector direction) {
