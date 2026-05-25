@@ -46,29 +46,40 @@ public class BlockBreakListener implements Listener {
         Block origin = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
 
-        // Kiểm tra đúng công cụ
+        // Không phải công cụ Excavator
         if (tool == null || !tool.hasItemMeta()) return;
         if (!tool.getItemMeta().getPersistentDataContainer().has(KEY, PersistentDataType.BYTE)) return;
 
         // Chống đệ quy
         if (processingPlayers.contains(player.getUniqueId())) return;
 
-        // Xác định hướng đào an toàn (tránh zero vector)
-        Vector eye = player.getEyeLocation().toVector();
-        Vector target = origin.getLocation().toVector();
-        Vector direction = target.subtract(eye); // vector từ mắt đến block
+        // Xác định face dựa trên loại công cụ
+        BlockFace face;
+        Material toolType = tool.getType();
 
-        // Nếu đứng quá gần block (đào dưới chân) → mặc định đào mặt trên (DOWN)
-        if (direction.lengthSquared() < 0.0001) {
-            direction = new Vector(0, -1, 0);
+        // Nếu là xẻng → luôn đào ngang 3x3 (mặt UP hoặc DOWN)
+        if (toolType.name().endsWith("_SHOVEL")) {
+            // Nếu block nằm dưới hoặc ngang tầm mắt → đào mặt trên (DOWN)
+            if (origin.getY() <= player.getEyeLocation().getBlockY()) {
+                face = BlockFace.UP;   // Đào các block bên dưới
+            } else {
+                face = BlockFace.DOWN; // Đào các block bên trên
+            }
         } else {
-            direction.normalize();
+            // Cúp (pickaxe) hoặc công cụ khác → giữ nguyên theo hướng nhìn
+            Vector eye = player.getEyeLocation().toVector();
+            Vector target = origin.getLocation().toVector();
+            Vector direction = target.subtract(eye);
+            if (direction.lengthSquared() < 0.0001) {
+                direction = new Vector(0, -1, 0);
+            } else {
+                direction.normalize();
+            }
+            face = getTargetFace(direction);
         }
 
-        BlockFace face = getTargetFace(direction);
         Set<Block> blocks = get3x3Blocks(origin, face);
 
-        // Đánh dấu đang xử lý
         processingPlayers.add(player.getUniqueId());
 
         try {
@@ -76,14 +87,11 @@ public class BlockBreakListener implements Listener {
                 if (b.equals(origin)) continue;
                 if (b.getType() == Material.BEDROCK || b.getType() == Material.AIR) continue;
 
-                // Kiểm tra WorldGuard (nếu có)
                 if (!canBreak(player, b)) continue;
 
-                // Phá block an toàn
                 b.breakNaturally(tool);
             }
         } finally {
-            // Hủy đánh dấu
             processingPlayers.remove(player.getUniqueId());
         }
     }
