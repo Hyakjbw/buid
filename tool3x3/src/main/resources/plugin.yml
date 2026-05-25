@@ -1,13 +1,13 @@
 name: ExcavatorTools
-version: 1.0.0
+version: 1.0.1
 main: com.example.excavatortools.ExcavatorTools
 api-version: '1.21'
 commands:
   excavatortool:
-    description: Give a 3x3 excavator tool
-    usage: /excavatortool give <player> <type>
-    aliases: [extool]
+    description: Quản lý ExcavatorTools
+    usage: /<command> [give|reload] ...
+    aliases: [xt]
 permissions:
-  excavatortool.give:
-    description: Allows giving excavator tools
+  excavatortool.admin:
+    description: Cho phép dùng lệnh admin
     default: op
