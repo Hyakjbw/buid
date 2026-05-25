@@ -16,10 +16,9 @@ public class ExcavatorTools extends JavaPlugin {
         instance = this;
         excavatorKey = new NamespacedKey(this, "excavator");
         configManager = new ConfigManager(this);
-        WorldGuardHook.init(); // nếu có
         getServer().getPluginManager().registerEvents(new BlockBreakListener(), this);
         getCommand("excavatortool").setExecutor(new ExcavatorCommand());
-        getLogger().info("ExcavatorTools enabled! Debug: " + configManager.isDebug());
+        getLogger().info("ExcavatorTools enabled!");
     }
 
     @Override
@@ -34,11 +33,5 @@ public class ExcavatorTools extends JavaPlugin {
     public static boolean isExcavatorTool(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return false;
         return item.getItemMeta().getPersistentDataContainer().has(getExcavatorKey(), PersistentDataType.BYTE);
-    }
-
-    public void debug(String message) {
-        if (configManager.isDebug()) {
-            getLogger().info("[DEBUG] " + message);
-        }
     }
 }
