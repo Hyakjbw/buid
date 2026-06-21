@@ -69,11 +69,3 @@ Nếu bạn phát hiện lỗi (bug) hoặc muốn đề xuất thêm tính năn
 Tạo một Issue mới.
 Hoặc gửi một bản Pull Request sau khi đã tối ưu lại code.
 Tác giả: Huy (Hyakjbw)
-
----
-
-### Gợi ý thêm cho Huy:
-* Nếu bạn dùng **Maven** để build, các lệnh build trong README tôi đã để sẵn là `mvn clean package`. Nếu bạn dùng **Gradle**, bạn có thể sửa lại thành `./gradlew build`.
-* Bạn có thể bổ sung thêm các hình ảnh (GIF/Ảnh chụp màn hình) của tính năng đào 3x3 hoặc hiệu ứng của Mahoraga vào file README để trông trực quan và thu hút hơn nhé!
-📋
-📄
