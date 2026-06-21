@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       project:
-        description: 'Tên thư mục project cần build (VD: tool3x3, ram-optimizer)'
-        required: true
+        description: 'Tên thư mục (để TRỐNG để tự động tìm thư mục chứa mod/plugin)'
+        required: false
         type: string
-        default: 'ram-optimizer'
+        default: ''
       java_version:
-        description: 'Phiên bản Java (17 cho MC 1.18-1.20.4, 21 cho MC 1.20.5+)'
+        description: 'Phiên bản Java (17 cho Forge 1.20.1)'
         required: true
         type: choice
         options:
@@ -30,38 +30,38 @@ jobs:
           java-version: ${{ github.event.inputs.java_version }}
           distribution: 'temurin'
 
-      - name: Setup Gradle Cache
+      # Ép GitHub sử dụng đúng Gradle 8.4 (Tương thích hoàn hảo với Forge 1.20.1)
+      - name: Setup Gradle 8.4
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: wrapper
+          gradle-version: '8.4'
 
-      - name: Verify project directory exists
+      - name: Auto-detect and Build
         run: |
-          if [ ! -d "${{ github.event.inputs.project }}" ]; then
-            echo "❌ Thư mục '${{ github.event.inputs.project }}' không tồn tại!"
-            echo "Hãy kiểm tra lại tên project."
-            exit 1
+          PROJECT_DIR="${{ github.event.inputs.project }}"
+          
+          # Nếu ô nhập bị bỏ trống, tự động tìm thư mục chứa file build.gradle
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "🔍 Không nhập tên thư mục, đang tự động quét dự án..."
+            PROJECT_DIR=$(find . -mindepth 2 -name "build.gradle" -exec dirname {} \; | head -n 1)
+            
+            if [ -z "$PROJECT_DIR" ]; then
+              echo "❌ Không tìm thấy bất kỳ thư mục nào chứa file build.gradle!"
+              exit 1
+            fi
+            echo "✅ Đã tìm thấy dự án tại: $PROJECT_DIR"
           fi
-
-      - name: Grant Execute Permission & Setup Wrapper
-        working-directory: ${{ github.event.inputs.project }}
-        run: |
-          if [ ! -f gradlew ]; then
-            echo "Khởi tạo Gradle Wrapper..."
-            gradle wrapper --gradle-version 8.7
-          fi
-          chmod +x gradlew
-
-      - name: Build with Gradle
-        working-directory: ${{ github.event.inputs.project }}
-        run: ./gradlew build
+          
+          cd "$PROJECT_DIR"
+          
+          # Sử dụng công cụ gradle trực tiếp từ hệ thống thay vì wrapper
+          gradle build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.inputs.project }}-build
-          # Chỉ giữ lại file .jar chính, bỏ các file rác của Fabric
+          name: Auto-Build-Result
           path: |
-            ${{ github.event.inputs.project }}/build/libs/*.jar
-            !${{ github.event.inputs.project }}/build/libs/*-dev.jar
-            !${{ github.event.inputs.project }}/build/libs/*-sources.jar
+            **/build/libs/*.jar
+            !**/build/libs/*-dev.jar
+            !**/build/libs/*-sources.jar
