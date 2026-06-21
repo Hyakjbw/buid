@@ -53,7 +53,7 @@ jobs:
           
           cd "$PROJECT_DIR"
           
-          # FIX TRIỆT ĐỂ: Tự động ép tạo file settings.gradle chuẩn ngay tại thư mục build
+          # FIX 1: Tự động ép tạo file settings.gradle chuẩn
           echo "Tạo cấu hình plugin phụ trợ cho Forge..."
           cat <<EOF > settings.gradle
           pluginManagement {
@@ -64,6 +64,20 @@ jobs:
               }
           }
           rootProject.name = 'ramopt'
+          EOF
+
+          # FIX 2: Tự động tạo gradle.properties ngay tại thư mục làm việc
+          echo "Tạo file biến môi trường gradle.properties..."
+          cat <<EOF > gradle.properties
+          org.gradle.jvmargs=-Xmx3G
+          org.gradle.daemon=false
+          minecraft_version=1.20.1
+          forge_version=47.3.0
+          mapping_channel=official
+          mapping_version=1.20.1
+          mod_id=ramopt
+          mod_name=RAM Optimizer
+          mod_version=1.0.0
           EOF
           
           # Chạy build
