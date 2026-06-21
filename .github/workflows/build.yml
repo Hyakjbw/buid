@@ -40,7 +40,6 @@ jobs:
         run: |
           PROJECT_DIR="${{ github.event.inputs.project }}"
           
-          # Nếu ô nhập bị bỏ trống, tự động tìm thư mục chứa file build.gradle
           if [ -z "$PROJECT_DIR" ]; then
             echo "🔍 Không nhập tên thư mục, đang tự động quét dự án..."
             PROJECT_DIR=$(find . -mindepth 2 -name "build.gradle" -exec dirname {} \; | head -n 1)
@@ -54,7 +53,20 @@ jobs:
           
           cd "$PROJECT_DIR"
           
-          # Sử dụng công cụ gradle trực tiếp từ hệ thống thay vì wrapper
+          # FIX TRIỆT ĐỂ: Tự động ép tạo file settings.gradle chuẩn ngay tại thư mục build
+          echo "Tạo cấu hình plugin phụ trợ cho Forge..."
+          cat <<EOF > settings.gradle
+          pluginManagement {
+              repositories {
+                  maven { url = 'https://maven.minecraftforge.net/' }
+                  gradlePluginPortal()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = 'ramopt'
+          EOF
+          
+          # Chạy build
           gradle build
 
       - name: Upload artifact
