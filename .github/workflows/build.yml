@@ -4,10 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       project:
-        description: 'Tên thư mục project cần build (ví dụ: ExcavatorTools)'
+        description: 'Tên thư mục project cần build (VD: tool3x3, ram-optimizer)'
         required: true
         type: string
-        default: 'tool3x3'
+        default: 'ram-optimizer'
+      java_version:
+        description: 'Phiên bản Java (17 cho MC 1.18-1.20.4, 21 cho MC 1.20.5+)'
+        required: true
+        type: choice
+        options:
+          - '17'
+          - '21'
+        default: '17'
 
 jobs:
   build:
@@ -16,11 +24,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup JDK 21
-        uses: actions/setup-java@v3
+      - name: Setup JDK ${{ github.event.inputs.java_version }}
+        uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: ${{ github.event.inputs.java_version }}
           distribution: 'temurin'
+
+      - name: Setup Gradle Cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: wrapper
 
       - name: Verify project directory exists
         run: |
@@ -30,18 +43,25 @@ jobs:
             exit 1
           fi
 
-      - name: Build with Gradle
+      - name: Grant Execute Permission & Setup Wrapper
         working-directory: ${{ github.event.inputs.project }}
         run: |
-          # Nếu chưa có gradlew, tạo wrapper (chỉ cần làm 1 lần)
           if [ ! -f gradlew ]; then
+            echo "Khởi tạo Gradle Wrapper..."
             gradle wrapper --gradle-version 8.7
           fi
           chmod +x gradlew
-          ./gradlew build
+
+      - name: Build with Gradle
+        working-directory: ${{ github.event.inputs.project }}
+        run: ./gradlew build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.inputs.project }}
-          path: ${{ github.event.inputs.project }}/build/libs/*.jar
+          name: ${{ github.event.inputs.project }}-build
+          # Chỉ giữ lại file .jar chính, bỏ các file rác của Fabric
+          path: |
+            ${{ github.event.inputs.project }}/build/libs/*.jar
+            !${{ github.event.inputs.project }}/build/libs/*-dev.jar
+            !${{ github.event.inputs.project }}/build/libs/*-sources.jar
