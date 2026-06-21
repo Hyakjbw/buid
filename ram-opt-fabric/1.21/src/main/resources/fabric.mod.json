@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "ramopt",
+  "version": "${version}",
+  "name": "RAM Optimization",
+  "description": "Automatic RAM optimizer with real-time monitoring and customizable thresholds. Designed for mobile gaming optimization.",
+  "authors": [
+    "Hyakjbw"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Hyakjbw/buid",
+    "sources": "https://github.com/Hyakjbw/buid"
+  },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.hyakjbw.ramopt.fabric.RamOptModFabric"
+    ]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": ">=1.21"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}

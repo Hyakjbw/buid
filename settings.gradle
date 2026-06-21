@@ -1,0 +1,38 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url = 'https://files.minecraftforge.net/maven' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        maven { url = 'https://maven.fabricmc.net/' }
+    }
+}
+
+rootProject.name = 'ram-optimizer'
+
+// Shared module
+include(':ram-opt-shared')
+project(':ram-opt-shared').projectDir = file('ram-opt-shared')
+
+// Forge modules
+include(':ram-opt-forge-1.12.2')
+project(':ram-opt-forge-1.12.2').projectDir = file('ram-opt-forge/1.12.2')
+
+include(':ram-opt-forge-1.16.5')
+project(':ram-opt-forge-1.16.5').projectDir = file('ram-opt-forge/1.16.5')
+
+include(':ram-opt-forge-1.18.2')
+project(':ram-opt-forge-1.18.2').projectDir = file('ram-opt-forge/1.18.2')
+
+include(':ram-opt-forge-1.19.2')
+project(':ram-opt-forge-1.19.2').projectDir = file('ram-opt-forge/1.19.2')
+
+include(':ram-opt-forge-1.20.1')
+project(':ram-opt-forge-1.20.1').projectDir = file('ram-opt-forge/1.20.1')
+
+// Fabric modules
+include(':ram-opt-fabric-1.21')
+project(':ram-opt-fabric-1.21').projectDir = file('ram-opt-fabric/1.21')
+
+include(':ram-opt-fabric-1.26.2')
+project(':ram-opt-fabric-1.26.2').projectDir = file('ram-opt-fabric/1.26.2')

@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.hyakjbw.ramopt'
+version = '3.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Logging
+    implementation 'org.apache.logging.log4j:log4j-api:2.20.0'
+}
+
+tasks.named('jar') {
+    manifest {
+        attributes([
+                'Specification-Title'     : 'RAM Optimization Shared',
+                'Specification-Vendor'    : 'Hyakjbw',
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.version,
+                'Implementation-Vendor'   : 'Hyakjbw',
+        ])
+    }
+}
