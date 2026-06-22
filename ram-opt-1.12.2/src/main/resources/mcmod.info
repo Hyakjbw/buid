@@ -1,0 +1,9 @@
+[
+{
+  "modid": "ramoptimizer",
+  "name": "Pojav RAM Optimizer",
+  "description": "Tối ưu RAM cho PojavLauncher trên iOS",
+  "version": "1.0",
+  "mcversion": "1.12.2"
+}
+]
