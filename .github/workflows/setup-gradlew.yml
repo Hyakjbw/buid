@@ -1,0 +1,36 @@
+name: Setup Gradle Wrapper
+
+on:
+  workflow_dispatch: # Nút ấn Run thủ công
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Cho phép upload file lên repo
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Install Gradle 4.4.1 (Version for 1.12.2)
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 4.4.1
+
+      - name: Generate Wrapper
+        run: |
+          cd ram-opt-1.12.2
+          gradle wrapper
+
+      - name: Commit and Push Wrapper
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add ram-opt-1.12.2/gradlew ram-opt-1.12.2/gradlew.bat ram-opt-1.12.2/gradle/
+          git commit -m "Add Gradle Wrapper for 1.12.2"
+          git push
