@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - 'ram-opt-1.12.2/**'
-  workflow_dispatch: # <--- Dòng này tạo ra nút "Run workflow" để chạy thủ công
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,6 +21,10 @@ jobs:
         with:
           java-version: '8'
           distribution: 'temurin'
+
+      # Thêm bộ nhớ đệm để không phải tải lại Gradle và dependencies mỗi lần build
+      - name: Setup Gradle Cache
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Grant execute permission for gradlew
         run: |
