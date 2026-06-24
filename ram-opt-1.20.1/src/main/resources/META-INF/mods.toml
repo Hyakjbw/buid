@@ -8,8 +8,18 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="Hyakjbw"
 description="""
-Tối ưu hóa RAM tự động và hiển thị phần trăm sử dụng trên màn hình, thiết kế tối ưu hóa riêng cho thiết bị Mobile (PojavLauncher).
+Automatic RAM optimization with real-time monitoring and customizable thresholds.
+Designed for mobile gaming optimization (PojavLauncher).
+
+Features:
+- Real-time RAM usage monitoring and display
+- Automatic and aggressive cleanup strategies
+- Highly customizable settings via mods.toml
+- Performance-optimized HUD overlay
+- Multiple notification methods
 """
+logoFile=""
+changelogsUrl=""
 
 [[dependencies.${mod_id}]]
 modId="forge"

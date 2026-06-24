@@ -1,20 +1,31 @@
 package com.hyakjbw.ramopt;
 
+import com.hyakjbw.ramopt.config.ConfigManager;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.ModLoadingContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-// Tên modid phải khớp chính xác với khai báo trong mods.toml và build.gradle
+/**
+ * Main entry point for RAM Optimization Mod
+ * Handles initialization and event bus registration
+ */
 @Mod("ramopt")
 public class RamOptMod {
-    
-    public RamOptMod() {
-        // 1. Đăng ký file config
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, Config.SPEC, "ramopt-client.toml");
+    public static final String MOD_ID = "ramopt";
+    public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
-        // 2. Đăng ký các sự kiện (Các class sử dụng @Mod.EventBusSubscriber đã tự động đăng ký, 
-        // dòng này để đảm bảo Forge Load đúng vòng đời nếu cần mở rộng sau này)
+    public RamOptMod() {
+        LOGGER.info("Initializing RAM Optimization Mod...");
+        
+        // Register config files
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ConfigManager.CLIENT_SPEC, "ramopt-client.toml");
+        
+        // Register event bus
         MinecraftForge.EVENT_BUS.register(this);
+        
+        LOGGER.info("RAM Optimization Mod initialized successfully!");
     }
 }
